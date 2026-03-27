@@ -17,12 +17,12 @@ Implement `image_to_markdown.py` as a single-file Python CLI script that runs Te
     - Define `SUPPORTED_EXTENSIONS` set: `{".jpg", ".jpeg", ".png", ".gif", ".webp", ".tiff", ".tif", ".bmp"}`
     - _Requirements: 1.3, 3.5_
 
-- [ ] 3. Implement CLI and input validation
-  - [ ] 3.1 Implement `parse_args()`
+- [x] 3. Implement CLI and input validation
+  - [x] 3.1 Implement `parse_args()`
     - Use `argparse` with positional `image`, optional `--output`, optional `--lang` (default `"eng"`)
     - _Requirements: 1.1, 1.4, 5.1, 5.3_
 
-  - [ ] 3.2 Implement `validate_input(image_path: Path)`
+  - [x] 3.2 Implement `validate_input(image_path: Path)`
     - Exit 1 + stderr if file does not exist
     - Exit 1 + stderr if extension not in `SUPPORTED_EXTENSIONS`
     - _Requirements: 1.2, 1.3_

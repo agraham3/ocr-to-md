@@ -32,6 +32,8 @@
 #   pip install -r requirements.txt
 # ============================================================
 
+import argparse
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -63,3 +65,26 @@ class AnalysisResult:
     metadata: ImageMetadata
     extracted_text: str  # raw OCR output, may be empty
     vision: VisionResult
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Convert an image to a structured Markdown file using Tesseract OCR and OpenCV."
+    )
+    parser.add_argument("image", help="path to input image file")
+    parser.add_argument("--output", help="path for output .md file")
+    parser.add_argument("--lang", default="eng", help="Tesseract language code")
+    return parser.parse_args()
+
+
+def validate_input(image_path: Path):
+    if not image_path.exists():
+        print(f"Error: File not found: {image_path}", file=sys.stderr)
+        sys.exit(1)
+    if image_path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+        ext = image_path.suffix.lower()
+        print(
+            f"Error: Unsupported file type '{ext}'. Supported: jpg, jpeg, png, gif, webp, tiff, tif, bmp",
+            file=sys.stderr,
+        )
+        sys.exit(1)
