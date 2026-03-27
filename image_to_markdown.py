@@ -31,3 +31,35 @@
 # Python dependencies (install via pip):
 #   pip install -r requirements.txt
 # ============================================================
+
+from dataclasses import dataclass
+from pathlib import Path
+
+SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".tiff", ".tif", ".bmp"}
+
+
+@dataclass
+class ImageMetadata:
+    filename: str
+    width: int
+    height: int
+    file_size: int  # bytes
+    lang: str       # Tesseract language code used
+
+
+@dataclass
+class VisionResult:
+    contour_count: int
+    dominant_shapes: list[str]   # e.g. ["rectangle", "circle"]
+    line_count: int
+    line_orientations: list[str] # e.g. ["horizontal", "vertical"]
+    region_count: int
+    region_positions: list[str]  # e.g. ["top-left", "center"]
+    is_empty: bool               # True when no significant structure detected
+
+
+@dataclass
+class AnalysisResult:
+    metadata: ImageMetadata
+    extracted_text: str  # raw OCR output, may be empty
+    vision: VisionResult

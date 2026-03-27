@@ -11,8 +11,8 @@ Implement `image_to_markdown.py` as a single-file Python CLI script that runs Te
   - Add a comment block at the top of `image_to_markdown.py` with install instructions for the Tesseract binary
   - _Requirements: 2.1, 2.3, 2.4, 4.3_
 
-- [ ] 2. Define data models and constants
-  - [ ] 2.1 Implement `ImageMetadata`, `VisionResult`, and `AnalysisResult` dataclasses
+- [x] 2. Define data models and constants
+  - [x] 2.1 Implement `ImageMetadata`, `VisionResult`, and `AnalysisResult` dataclasses
     - Use `@dataclass` with the fields specified in the design
     - Define `SUPPORTED_EXTENSIONS` set: `{".jpg", ".jpeg", ".png", ".gif", ".webp", ".tiff", ".tif", ".bmp"}`
     - _Requirements: 1.3, 3.5_
