@@ -33,6 +33,7 @@
 # ============================================================
 
 import argparse
+import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -75,6 +76,50 @@ def parse_args():
     parser.add_argument("--output", help="path for output .md file")
     parser.add_argument("--lang", default="eng", help="Tesseract language code")
     return parser.parse_args()
+
+
+def derive_output_path(image_path: Path, output_arg: str | None) -> Path:
+    """Return the output .md path: explicit --output arg or stem-based default."""
+    if output_arg:
+        return Path(output_arg)
+    return image_path.parent / (image_path.stem + ".md")
+
+
+def check_dependencies():
+    """Fail fast if required binaries or Python packages are missing."""
+    if shutil.which("tesseract") is None:
+        print(
+            "Error: Tesseract not found. Install from https://github.com/tesseract-ocr/tesseract",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    try:
+        import pytesseract  # noqa: F401
+    except ImportError:
+        print(
+            "Error: pytesseract not installed. Run: pip install pytesseract",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    try:
+        import cv2  # noqa: F401
+    except ImportError:
+        print(
+            "Error: opencv-python not installed. Run: pip install opencv-python",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    try:
+        import PIL  # noqa: F401
+    except ImportError:
+        print(
+            "Error: Pillow not installed. Run: pip install Pillow",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 def validate_input(image_path: Path):

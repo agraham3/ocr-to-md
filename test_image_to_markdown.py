@@ -11,7 +11,13 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from image_to_markdown import validate_input, parse_args, SUPPORTED_EXTENSIONS
+from image_to_markdown import (
+    validate_input,
+    parse_args,
+    derive_output_path,
+    check_dependencies,
+    SUPPORTED_EXTENSIONS,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -112,3 +118,97 @@ def test_property_invalid_extension_rejection(ext):
                 validate_input(bad_file)
         assert exc_info.value.code != 0
         assert fake_stderr.getvalue().strip() != ""
+
+
+# ---------------------------------------------------------------------------
+# derive_output_path tests
+# ---------------------------------------------------------------------------
+
+def test_derive_output_path_default(tmp_path):
+    """Req 1.5: no --output → stem + .md in same directory."""
+    cases = [
+        ("photo.png", "photo.md"),
+        ("diagram.jpg", "diagram.md"),
+        ("scan.tiff", "scan.md"),
+        ("my_image.webp", "my_image.md"),
+    ]
+    for filename, expected_name in cases:
+        image_path = tmp_path / filename
+        result = derive_output_path(image_path, None)
+        assert result == tmp_path / expected_name, f"Failed for {filename}"
+
+
+def test_derive_output_path_explicit_output(tmp_path):
+    """Req 1.4: --output overrides the default path."""
+    image_path = tmp_path / "photo.png"
+    explicit = str(tmp_path / "custom_output.md")
+    result = derive_output_path(image_path, explicit)
+    assert result == Path(explicit)
+
+
+# ---------------------------------------------------------------------------
+# check_dependencies tests
+# ---------------------------------------------------------------------------
+
+def test_dependency_check_missing_tesseract(capsys):
+    """Req 2.3: tesseract binary not on PATH → exit 1 + stderr."""
+    with patch("shutil.which", return_value=None):
+        with pytest.raises(SystemExit) as exc_info:
+            check_dependencies()
+    assert exc_info.value.code == 1
+    assert capsys.readouterr().err.strip() != ""
+
+
+def test_dependency_check_missing_pytesseract(capsys):
+    """Req 2.4: pytesseract not importable → exit 1 + stderr."""
+    import builtins
+    real_import = builtins.__import__
+
+    def mock_import(name, *args, **kwargs):
+        if name == "pytesseract":
+            raise ImportError("No module named 'pytesseract'")
+        return real_import(name, *args, **kwargs)
+
+    with patch("shutil.which", return_value="/usr/bin/tesseract"):
+        with patch("builtins.__import__", side_effect=mock_import):
+            with pytest.raises(SystemExit) as exc_info:
+                check_dependencies()
+    assert exc_info.value.code == 1
+    assert capsys.readouterr().err.strip() != ""
+
+
+def test_dependency_check_missing_cv2(capsys):
+    """Req 4.3: cv2 not importable → exit 1 + stderr."""
+    import builtins
+    real_import = builtins.__import__
+
+    def mock_import(name, *args, **kwargs):
+        if name == "cv2":
+            raise ImportError("No module named 'cv2'")
+        return real_import(name, *args, **kwargs)
+
+    with patch("shutil.which", return_value="/usr/bin/tesseract"):
+        with patch("builtins.__import__", side_effect=mock_import):
+            with pytest.raises(SystemExit) as exc_info:
+                check_dependencies()
+    assert exc_info.value.code == 1
+    assert capsys.readouterr().err.strip() != ""
+
+
+# ---------------------------------------------------------------------------
+# Property-based test: Property 3 — Output path derives from input filename stem
+# ---------------------------------------------------------------------------
+
+# Feature: image-to-markdown, Property 3: Output path derives from input filename stem
+# Validates: Requirements 1.5
+@given(
+    st.from_regex(r'[a-zA-Z0-9_\-]+', fullmatch=True),
+    st.sampled_from(sorted(SUPPORTED_EXTENSIONS)),
+)
+@settings(max_examples=100)
+def test_property_output_path_stem_matches_input(stem, ext):
+    """Property 3: derive_output_path with no output_arg produces a path whose stem equals the input stem."""
+    image_path = Path(stem + ext)
+    result = derive_output_path(image_path, None)
+    assert result.stem == stem
+    assert result.suffix == ".md"

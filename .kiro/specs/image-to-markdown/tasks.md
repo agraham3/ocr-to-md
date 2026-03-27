@@ -45,24 +45,24 @@ Implement `image_to_markdown.py` as a single-file Python CLI script that runs Te
     - **Validates: Requirements 1.3**
     - Generate extensions not in `SUPPORTED_EXTENSIONS`, create a temp file with that extension, assert exit code is non-zero with non-empty stderr
 
-- [ ] 4. Implement `derive_output_path()` and `check_dependencies()`
-  - [ ] 4.1 Implement `derive_output_path(image_path: Path, output_arg: str | None) -> Path`
+- [x] 4. Implement `derive_output_path()` and `check_dependencies()`
+  - [x] 4.1 Implement `derive_output_path(image_path: Path, output_arg: str | None) -> Path`
     - Return `Path(output_arg)` if provided, else `image_path.parent / (image_path.stem + ".md")`
     - _Requirements: 1.4, 1.5_
 
-  - [ ] 4.2 Implement `check_dependencies()`
+  - [x] 4.2 Implement `check_dependencies()`
     - Check `shutil.which("tesseract")` → exit 1 + stderr if None
     - Try importing `pytesseract`, `cv2`, `PIL` → exit 1 + stderr with pip install hint for each
     - _Requirements: 2.3, 2.4, 4.3_
 
-  - [ ] 4.3 Write unit tests for `derive_output_path` and `check_dependencies`
+  - [x] 4.3 Write unit tests for `derive_output_path` and `check_dependencies`
     - `test_derive_output_path`: several concrete filenames verify stem-based naming
     - `test_dependency_check_missing_tesseract`: mock `shutil.which` → None, assert exit 1
     - `test_dependency_check_missing_pytesseract`: mock import failure, assert exit 1
     - `test_dependency_check_missing_cv2`: mock import failure, assert exit 1
     - _Requirements: 1.5, 2.3, 2.4, 4.3_
 
-  - [ ] 4.4 Write property test for output path derivation (Property 3)
+  - [x] 4.4 Write property test for output path derivation (Property 3)
     - **Property 3: Output path derives from input filename stem**
     - **Validates: Requirements 1.5**
     - Use `@given(st.from_regex(r'[a-zA-Z0-9_\-]+', fullmatch=True), st.sampled_from(list(SUPPORTED_EXTENSIONS)))` and assert `derive_output_path(Path(stem+ext), None).stem == stem`
