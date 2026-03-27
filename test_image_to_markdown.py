@@ -566,8 +566,7 @@ def test_output_is_deterministic(image_path):
 # image_with_shapes_strategy — composite Hypothesis strategy for images with shapes
 # ---------------------------------------------------------------------------
 
-@composite
-def image_with_shapes_strategy(draw):
+def _make_shapes_image() -> Path:
     """Generate a synthetic image with drawn rectangles guaranteed to have detectable contours."""
     import cv2
     import numpy as np
@@ -581,6 +580,11 @@ def image_with_shapes_strategy(draw):
     cv2.imwrite(tmp.name, img)
     tmp.close()
     return Path(tmp.name)
+
+
+def image_with_shapes_strategy():
+    """Hypothesis strategy: always produces a synthetic image with detectable contours."""
+    return st.builds(_make_shapes_image)
 
 
 # ---------------------------------------------------------------------------

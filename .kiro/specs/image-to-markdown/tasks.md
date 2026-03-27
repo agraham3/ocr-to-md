@@ -152,7 +152,7 @@ Implement `image_to_markdown.py` as a single-file Python CLI script that runs Te
     - **Validates: Requirements 4.4, 4.5, 4.6**
     - Use `image_with_shapes_strategy()` (images with drawn rectangles/circles), assert `## Visual Structure` contains a numeric count
 
-- [ ] 10. Final checkpoint — Ensure all tests pass
+- [x] 10. Final checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
