@@ -275,3 +275,41 @@ def test_run_ocr_blank_image():
     result = run_ocr(img, lang="eng")
     assert isinstance(result, str)
     assert result.strip() == "", f"Expected empty OCR result for blank image, got: {result!r}"
+
+
+# ---------------------------------------------------------------------------
+# run_vision tests (Task 6)
+# Requirements: 4.4, 4.7
+# ---------------------------------------------------------------------------
+
+from image_to_markdown import run_vision
+
+
+def test_run_vision_with_shapes(tmp_path):
+    """Req 4.4: synthetic image with drawn rectangles → contour_count > 0."""
+    import cv2
+    import numpy as np
+
+    img = np.ones((200, 200, 3), dtype=np.uint8) * 255  # white background
+    cv2.rectangle(img, (20, 20), (80, 80), (0, 0, 0), 2)
+    cv2.rectangle(img, (110, 110), (180, 180), (0, 0, 0), 2)
+
+    img_path = tmp_path / "shapes.png"
+    cv2.imwrite(str(img_path), img)
+
+    result = run_vision(img_path)
+    assert result.contour_count > 0
+
+
+def test_run_vision_blank_image(tmp_path):
+    """Req 4.7: blank white image → is_empty == True."""
+    import cv2
+    import numpy as np
+
+    img = np.ones((200, 200, 3), dtype=np.uint8) * 255  # fully white
+
+    img_path = tmp_path / "blank.png"
+    cv2.imwrite(str(img_path), img)
+
+    result = run_vision(img_path)
+    assert result.is_empty is True

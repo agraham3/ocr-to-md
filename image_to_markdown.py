@@ -156,3 +156,115 @@ def run_ocr(image, lang: str) -> str:
     import pytesseract
 
     return pytesseract.image_to_string(image, lang=lang)
+
+
+def run_vision(image_path: Path) -> VisionResult:
+    """Analyze image visual structure using OpenCV and return a VisionResult."""
+    import cv2
+    import numpy as np
+    import math
+
+    img = cv2.imread(str(image_path))
+    if img is None:
+        return VisionResult(
+            contour_count=0,
+            dominant_shapes=[],
+            line_count=0,
+            line_orientations=[],
+            region_count=0,
+            region_positions=[],
+            is_empty=True,
+        )
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges = cv2.Canny(blurred, 50, 150)
+
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contour_count = len(contours)
+
+    # Classify dominant shapes
+    shape_counts: dict[str, int] = {}
+    region_positions: list[str] = []
+    h_img, w_img = img.shape[:2]
+    area_threshold = 100
+
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        peri = cv2.arcLength(cnt, True)
+        if peri == 0:
+            continue
+        approx = cv2.approxPolyDP(cnt, 0.04 * peri, True)
+        vertices = len(approx)
+
+        if vertices == 4:
+            shape = "rectangle"
+        else:
+            x, y, w, h = cv2.boundingRect(cnt)
+            aspect_ratio = w / h if h != 0 else 0
+            if 0.85 <= aspect_ratio <= 1.15:
+                # Check circularity
+                circularity = (4 * math.pi * area) / (peri * peri) if peri > 0 else 0
+                shape = "circle" if circularity > 0.7 else "polygon"
+            else:
+                shape = "polygon"
+
+        shape_counts[shape] = shape_counts.get(shape, 0) + 1
+
+        # Compute region positions for large contours
+        if area > area_threshold:
+            x, y, w, h = cv2.boundingRect(cnt)
+            cx = x + w / 2
+            cy = y + h / 2
+            mid_x = w_img / 2
+            mid_y = h_img / 2
+            if cx < mid_x and cy < mid_y:
+                pos = "top-left"
+            elif cx >= mid_x and cy < mid_y:
+                pos = "top-right"
+            elif cx < mid_x and cy >= mid_y:
+                pos = "bottom-left"
+            elif cx >= mid_x and cy >= mid_y:
+                pos = "bottom-right"
+            else:
+                pos = "center"
+            # Use "center" for contours near the middle
+            if abs(cx - mid_x) < w_img * 0.1 and abs(cy - mid_y) < h_img * 0.1:
+                pos = "center"
+            if pos not in region_positions:
+                region_positions.append(pos)
+
+    # Sort shapes by frequency, return top shapes
+    dominant_shapes = [s for s, _ in sorted(shape_counts.items(), key=lambda x: -x[1])]
+
+    # Detect lines with HoughLinesP
+    lines = cv2.HoughLinesP(edges, 1, math.pi / 180, threshold=50, minLineLength=30, maxLineGap=10)
+    line_count = 0
+    orientation_set: set[str] = set()
+
+    if lines is not None:
+        line_count = len(lines)
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            dx = x2 - x1
+            dy = y2 - y1
+            angle = abs(math.degrees(math.atan2(dy, dx))) % 180
+            if angle < 20 or angle > 160:
+                orientation_set.add("horizontal")
+            elif 70 < angle < 110:
+                orientation_set.add("vertical")
+            else:
+                orientation_set.add("diagonal")
+
+    line_orientations = sorted(orientation_set)
+    is_empty = contour_count == 0 and line_count == 0
+
+    return VisionResult(
+        contour_count=contour_count,
+        dominant_shapes=dominant_shapes,
+        line_count=line_count,
+        line_orientations=line_orientations,
+        region_count=len(region_positions),
+        region_positions=region_positions,
+        is_empty=is_empty,
+    )

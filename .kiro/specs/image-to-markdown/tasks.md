@@ -81,8 +81,8 @@ Implement `image_to_markdown.py` as a single-file Python CLI script that runs Te
     - `test_run_ocr_blank_image`: blank white image → empty string
     - _Requirements: 2.1, 2.5_
 
-- [ ] 6. Implement `run_vision()`
-  - [ ] 6.1 Implement `run_vision(image_path: Path) -> VisionResult`
+- [x] 6. Implement `run_vision()`
+  - [x] 6.1 Implement `run_vision(image_path: Path) -> VisionResult`
     - Load with `cv2.imread()`, convert to grayscale, Gaussian blur, Canny edges
     - Find contours with `cv2.findContours()`, classify shapes via `cv2.approxPolyDP` and aspect ratio
     - Detect lines with `cv2.HoughLinesP()`, classify as horizontal / vertical / diagonal
@@ -90,7 +90,7 @@ Implement `image_to_markdown.py` as a single-file Python CLI script that runs Te
     - Set `is_empty=True` when no significant structure detected
     - _Requirements: 4.1, 4.2, 4.4, 4.5, 4.6, 4.7_
 
-  - [ ] 6.2 Write unit tests for `run_vision`
+  - [x] 6.2 Write unit tests for `run_vision`
     - `test_run_vision_with_shapes`: synthetic image with drawn rectangles → `contour_count > 0`
     - `test_run_vision_blank_image`: blank white image → `VisionResult.is_empty == True`
     - _Requirements: 4.4, 4.7_
