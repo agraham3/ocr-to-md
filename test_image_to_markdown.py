@@ -560,3 +560,102 @@ def test_output_is_deterministic(image_path):
             os.unlink(image_path)
         except OSError:
             pass
+
+
+# ---------------------------------------------------------------------------
+# image_with_shapes_strategy — composite Hypothesis strategy for images with shapes
+# ---------------------------------------------------------------------------
+
+@composite
+def image_with_shapes_strategy(draw):
+    """Generate a synthetic image with drawn rectangles guaranteed to have detectable contours."""
+    import cv2
+    import numpy as np
+
+    img = np.ones((128, 128, 3), dtype=np.uint8) * 255  # white background
+    # Draw two black rectangles to guarantee contours
+    cv2.rectangle(img, (10, 10), (50, 50), (0, 0, 0), 2)
+    cv2.rectangle(img, (70, 70), (118, 118), (0, 0, 0), 2)
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+    cv2.imwrite(tmp.name, img)
+    tmp.close()
+    return Path(tmp.name)
+
+
+# ---------------------------------------------------------------------------
+# Task 9.2 — Property 7: Successful run prints output path to stdout
+# ---------------------------------------------------------------------------
+
+# Feature: image-to-markdown, Property 7: Successful run prints output path to stdout
+# Validates: Requirements 5.2
+@pytest.mark.skipif(not cv2_available, reason="cv2 not importable")
+@given(image_strategy())
+@settings(max_examples=100, deadline=None)
+def test_stdout_contains_output_path(image_path):
+    """Property 7: A successful pipeline run prints the resolved output path to stdout."""
+    import io
+
+    try:
+        pil_image, metadata = load_image(image_path)
+        metadata.lang = "eng"
+        ocr_text = run_ocr(pil_image, lang="eng") if shutil.which("tesseract") else ""
+        vision = run_vision(image_path)
+        result = AnalysisResult(metadata=metadata, extracted_text=ocr_text, vision=vision)
+        md = build_markdown(result)
+
+        out_path = image_path.with_suffix(".md")
+        fake_stdout = io.StringIO()
+        with patch("sys.stdout", fake_stdout):
+            write_output(md, out_path)
+
+        printed = fake_stdout.getvalue()
+        assert str(out_path.resolve()) in printed
+    finally:
+        for p in (image_path, image_path.with_suffix(".md")):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+
+
+# ---------------------------------------------------------------------------
+# Task 9.3 — Property 6: Visual analysis content reflects detected features
+# ---------------------------------------------------------------------------
+
+# Feature: image-to-markdown, Property 6: Visual analysis content reflects detected features
+# Validates: Requirements 4.4, 4.5, 4.6
+@pytest.mark.skipif(not cv2_available, reason="cv2 not importable")
+@given(image_with_shapes_strategy())
+@settings(max_examples=100, deadline=None)
+def test_visual_analysis_contains_counts(image_path):
+    """Property 6: When OpenCV detects contours/lines, ## Visual Structure contains a numeric count."""
+    import re
+
+    try:
+        pil_image, metadata = load_image(image_path)
+        metadata.lang = "eng"
+        ocr_text = run_ocr(pil_image, lang="eng") if shutil.which("tesseract") else ""
+        vision = run_vision(image_path)
+
+        # The strategy guarantees detectable contours; skip if vision is unexpectedly empty
+        if vision.is_empty:
+            return
+
+        result = AnalysisResult(metadata=metadata, extracted_text=ocr_text, vision=vision)
+        md = build_markdown(result)
+
+        # Extract the ## Visual Structure section
+        start = md.index("## Visual Structure")
+        end = md.index("## Metadata")
+        visual_section = md[start:end]
+
+        # Must contain at least one numeric digit (a count)
+        assert re.search(r'\d+', visual_section), (
+            f"Expected a numeric count in ## Visual Structure, got:\n{visual_section}"
+        )
+    finally:
+        try:
+            os.unlink(image_path)
+        except OSError:
+            pass

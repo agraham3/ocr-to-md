@@ -344,3 +344,33 @@ def write_output(markdown: str, output_path: Path):
         print(f"Error: Cannot write to {output_path}: {e}", file=sys.stderr)
         sys.exit(1)
     print(str(output_path.resolve()))
+
+
+def main():
+    """Orchestrate the full image-to-markdown pipeline."""
+    check_dependencies()
+    args = parse_args()
+
+    image_path = Path(args.image)
+    validate_input(image_path)
+
+    output_path = derive_output_path(image_path, args.output)
+
+    pil_image, metadata = load_image(image_path)
+    metadata.lang = args.lang
+
+    extracted_text = run_ocr(pil_image, lang=args.lang)
+    vision = run_vision(image_path)
+
+    result = AnalysisResult(
+        metadata=metadata,
+        extracted_text=extracted_text,
+        vision=vision,
+    )
+
+    markdown = build_markdown(result)
+    write_output(markdown, output_path)
+
+
+if __name__ == "__main__":
+    main()

@@ -137,17 +137,17 @@ Implement `image_to_markdown.py` as a single-file Python CLI script that runs Te
     - **Validates: Requirements 6.2**
     - Use `image_strategy()`, run the pipeline twice with identical args, assert byte-for-byte identical output
 
-- [ ] 9. Implement `main()` and wire everything together
-  - [ ] 9.1 Implement `main()`
+- [x] 9. Implement `main()` and wire everything together
+  - [x] 9.1 Implement `main()`
     - Call `check_dependencies()`, `parse_args()`, `validate_input()`, `derive_output_path()`, `load_image()`, `run_ocr()`, `run_vision()`, build `AnalysisResult`, `build_markdown()`, `write_output()`
     - _Requirements: 1.1, 2.1, 4.1, 5.2_
 
-  - [ ] 9.2 Write property test for stdout output path (Property 7)
+  - [x] 9.2 Write property test for stdout output path (Property 7)
     - **Property 7: Successful run prints output path to stdout**
     - **Validates: Requirements 5.2**
     - Use `image_strategy()`, invoke `main()` via subprocess or captured stdout, assert output path appears in stdout
 
-  - [ ] 9.3 Write property test for visual analysis content (Property 6)
+  - [x] 9.3 Write property test for visual analysis content (Property 6)
     - **Property 6: Visual analysis content reflects detected features**
     - **Validates: Requirements 4.4, 4.5, 4.6**
     - Use `image_with_shapes_strategy()` (images with drawn rectangles/circles), assert `## Visual Structure` contains a numeric count
