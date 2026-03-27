@@ -6,7 +6,7 @@ Implement `image_to_markdown.py` as a single-file Python CLI script that runs Te
 
 ## Tasks
 
-- [ ] 1. Set up project dependencies
+- [x] 1. Set up project dependencies
   - Create `requirements.txt` listing `pytesseract`, `opencv-python`, `Pillow`, `hypothesis`, and `pytest`
   - Add a comment block at the top of `image_to_markdown.py` with install instructions for the Tesseract binary
   - _Requirements: 2.1, 2.3, 2.4, 4.3_
