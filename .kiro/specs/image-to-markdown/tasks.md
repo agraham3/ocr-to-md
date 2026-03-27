@@ -95,7 +95,7 @@ Implement `image_to_markdown.py` as a single-file Python CLI script that runs Te
     - `test_run_vision_blank_image`: blank white image → `VisionResult.is_empty == True`
     - _Requirements: 4.4, 4.7_
 
-- [ ] 7. Checkpoint — Ensure all tests pass
+- [x] 7. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 8. Implement `build_markdown()` and `write_output()`
