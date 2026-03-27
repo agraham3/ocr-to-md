@@ -98,41 +98,41 @@ Implement `image_to_markdown.py` as a single-file Python CLI script that runs Te
 - [x] 7. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Implement `build_markdown()` and `write_output()`
-  - [ ] 8.1 Implement `build_markdown(result: AnalysisResult) -> str`
+- [x] 8. Implement `build_markdown()` and `write_output()`
+  - [x] 8.1 Implement `build_markdown(result: AnalysisResult) -> str`
     - Assemble all five sections in order: `# Image:`, `## Summary`, `## Extracted Text`, `## Visual Structure`, `## Metadata`
     - Use `"_No text was detected in this image._"` when OCR is empty/whitespace
     - Use `"_No significant visual structure was detected._"` when `vision.is_empty`
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-  - [ ] 8.2 Implement `write_output(markdown: str, output_path: Path)`
+  - [x] 8.2 Implement `write_output(markdown: str, output_path: Path)`
     - Write with `encoding="utf-8"`, print resolved path to stdout
     - Exit 1 + stderr on `OSError`
     - _Requirements: 3.6, 5.2_
 
-  - [ ] 8.3 Write unit tests for `build_markdown` and `write_output`
+  - [x] 8.3 Write unit tests for `build_markdown` and `write_output`
     - `test_build_markdown_all_sections`: all five headings present
     - `test_build_markdown_no_text`: "no text was detected" note present
     - `test_build_markdown_no_vision`: "no significant visual structure" note present
     - `test_stdout_output_path`: stdout contains the output path on success
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 5.2_
 
-  - [ ] 8.4 Write property test for required sections (Property 4)
+  - [x] 8.4 Write property test for required sections (Property 4)
     - **Property 4: Output markdown contains all required sections**
     - **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5**
     - Use `image_strategy()` (small synthetic PIL images) and assert all five section headings appear in order
 
-  - [ ] 8.5 Write property test for UTF-8 output (Property 5)
+  - [x] 8.5 Write property test for UTF-8 output (Property 5)
     - **Property 5: Output file is valid UTF-8**
     - **Validates: Requirements 3.6**
     - Use `image_strategy()`, write output, read bytes back and assert `bytes.decode("utf-8")` does not raise
 
-  - [ ] 8.6 Write property test for valid Markdown output (Property 8)
+  - [x] 8.6 Write property test for valid Markdown output (Property 8)
     - **Property 8: Output is valid Markdown**
     - **Validates: Requirements 6.1**
     - Use `image_strategy()`, parse the output with `markdown-it-py` or `mistune` and assert no parse error
 
-  - [ ] 8.7 Write property test for deterministic output (Property 9)
+  - [x] 8.7 Write property test for deterministic output (Property 9)
     - **Property 9: Deterministic output (idempotence)**
     - **Validates: Requirements 6.2**
     - Use `image_strategy()`, run the pipeline twice with identical args, assert byte-for-byte identical output

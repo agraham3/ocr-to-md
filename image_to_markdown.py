@@ -268,3 +268,79 @@ def run_vision(image_path: Path) -> VisionResult:
         region_positions=region_positions,
         is_empty=is_empty,
     )
+
+
+def build_markdown(result: AnalysisResult) -> str:
+    """Assemble all five sections into a structured Markdown string."""
+    m = result.metadata
+    v = result.vision
+
+    # Determine text detected status for summary
+    has_text = bool(result.extracted_text.strip())
+    text_status = "text detected" if has_text else "no text detected"
+
+    # Section 1: Title
+    lines = [
+        f"# Image: {m.filename}",
+        "",
+        # Section 2: Summary
+        "## Summary",
+        f"{m.filename}, {m.width}x{m.height} px, {text_status}.",
+        "",
+        # Section 3: Extracted Text
+        "## Extracted Text",
+    ]
+
+    if has_text:
+        lines.append(result.extracted_text.strip())
+    else:
+        lines.append("_No text was detected in this image._")
+
+    lines.append("")
+
+    # Section 4: Visual Structure
+    lines.append("## Visual Structure")
+
+    if v.is_empty:
+        lines.append("_No significant visual structure was detected._")
+    else:
+        parts = []
+        if v.contour_count > 0:
+            shape_desc = ", ".join(v.dominant_shapes) if v.dominant_shapes else "unknown"
+            parts.append(
+                f"Detected {v.contour_count} contour(s) with dominant shapes: {shape_desc}."
+            )
+        if v.line_count > 0:
+            orient_desc = ", ".join(v.line_orientations) if v.line_orientations else "unknown"
+            parts.append(
+                f"Detected {v.line_count} line(s) with orientations: {orient_desc}."
+            )
+        if v.region_count > 0:
+            pos_desc = ", ".join(v.region_positions) if v.region_positions else "unknown"
+            parts.append(
+                f"Detected {v.region_count} region(s) at positions: {pos_desc}."
+            )
+        lines.append(" ".join(parts) if parts else "_No significant visual structure was detected._")
+
+    lines.append("")
+
+    # Section 5: Metadata
+    lines += [
+        "## Metadata",
+        f"- **Filename:** {m.filename}",
+        f"- **File size:** {m.file_size} bytes",
+        f"- **Dimensions:** {m.width}x{m.height} px",
+        f"- **Tesseract language:** {m.lang}",
+    ]
+
+    return "\n".join(lines) + "\n"
+
+
+def write_output(markdown: str, output_path: Path):
+    """Write markdown to output_path with UTF-8 encoding; print resolved path to stdout."""
+    try:
+        output_path.write_text(markdown, encoding="utf-8")
+    except OSError as e:
+        print(f"Error: Cannot write to {output_path}: {e}", file=sys.stderr)
+        sys.exit(1)
+    print(str(output_path.resolve()))

@@ -17,6 +17,14 @@ from image_to_markdown import (
     derive_output_path,
     check_dependencies,
     SUPPORTED_EXTENSIONS,
+    build_markdown,
+    write_output,
+    load_image,
+    run_ocr,
+    run_vision,
+    AnalysisResult,
+    ImageMetadata,
+    VisionResult,
 )
 
 
@@ -219,8 +227,6 @@ def test_property_output_path_stem_matches_input(stem, ext):
 # Requirements: 2.1, 2.5
 # ---------------------------------------------------------------------------
 
-from image_to_markdown import load_image, run_ocr
-
 
 def test_load_image_returns_metadata(tmp_path):
     """load_image extracts correct width, height, file_size, and filename."""
@@ -248,6 +254,18 @@ tesseract_available = shutil.which("tesseract") is not None
 requires_tesseract = pytest.mark.skipif(
     not tesseract_available,
     reason="Tesseract binary not found on PATH — install tesseract to run OCR tests",
+)
+
+# Skip cv2 tests when the cv2 library is not importable (e.g. DLL issues on Windows).
+try:
+    import cv2 as _cv2  # noqa: F401
+    cv2_available = True
+except ImportError:
+    cv2_available = False
+
+requires_cv2 = pytest.mark.skipif(
+    not cv2_available,
+    reason="cv2 (opencv-python) not importable — install/fix opencv-python to run vision tests",
 )
 
 
@@ -282,9 +300,8 @@ def test_run_ocr_blank_image():
 # Requirements: 4.4, 4.7
 # ---------------------------------------------------------------------------
 
-from image_to_markdown import run_vision
 
-
+@requires_cv2
 def test_run_vision_with_shapes(tmp_path):
     """Req 4.4: synthetic image with drawn rectangles → contour_count > 0."""
     import cv2
@@ -301,6 +318,7 @@ def test_run_vision_with_shapes(tmp_path):
     assert result.contour_count > 0
 
 
+@requires_cv2
 def test_run_vision_blank_image(tmp_path):
     """Req 4.7: blank white image → is_empty == True."""
     import cv2
@@ -313,3 +331,232 @@ def test_run_vision_blank_image(tmp_path):
 
     result = run_vision(img_path)
     assert result.is_empty is True
+
+
+# ---------------------------------------------------------------------------
+# Helpers shared by Task 8 tests
+# ---------------------------------------------------------------------------
+
+import tempfile
+import os
+from hypothesis.strategies import composite
+
+
+def _make_analysis_result(
+    filename="test.png",
+    width=64,
+    height=64,
+    file_size=1024,
+    lang="eng",
+    extracted_text="Hello world",
+    is_empty=False,
+):
+    """Build a minimal AnalysisResult for unit tests."""
+    metadata = ImageMetadata(
+        filename=filename,
+        width=width,
+        height=height,
+        file_size=file_size,
+        lang=lang,
+    )
+    vision = VisionResult(
+        contour_count=0 if is_empty else 2,
+        dominant_shapes=[] if is_empty else ["rectangle"],
+        line_count=0 if is_empty else 1,
+        line_orientations=[] if is_empty else ["horizontal"],
+        region_count=0 if is_empty else 1,
+        region_positions=[] if is_empty else ["top-left"],
+        is_empty=is_empty,
+    )
+    return AnalysisResult(metadata=metadata, extracted_text=extracted_text, vision=vision)
+
+
+# ---------------------------------------------------------------------------
+# Task 8.3 — Unit tests for build_markdown and write_output
+# ---------------------------------------------------------------------------
+
+def test_build_markdown_all_sections():
+    """Req 3.1-3.5: all five section headings present in output."""
+    result = _make_analysis_result()
+    md = build_markdown(result)
+    assert "# Image:" in md
+    assert "## Summary" in md
+    assert "## Extracted Text" in md
+    assert "## Visual Structure" in md
+    assert "## Metadata" in md
+
+
+def test_build_markdown_no_text():
+    """Req 3.3: empty OCR text → 'no text was detected' note."""
+    result = _make_analysis_result(extracted_text="   ")
+    md = build_markdown(result)
+    assert "_No text was detected in this image._" in md
+
+
+def test_build_markdown_no_vision():
+    """Req 3.4: is_empty vision → 'no significant visual structure' note."""
+    result = _make_analysis_result(is_empty=True)
+    md = build_markdown(result)
+    assert "_No significant visual structure was detected._" in md
+
+
+def test_stdout_output_path(tmp_path, capsys):
+    """Req 5.2: stdout contains the resolved output path on success."""
+    result = _make_analysis_result()
+    md = build_markdown(result)
+    out_path = tmp_path / "output.md"
+    write_output(md, out_path)
+    captured = capsys.readouterr()
+    assert str(out_path.resolve()) in captured.out
+
+
+# ---------------------------------------------------------------------------
+# image_strategy — composite Hypothesis strategy for synthetic PIL images
+# ---------------------------------------------------------------------------
+
+@composite
+def image_strategy(draw):
+    """Generate a small (32x32) synthetic PIL image saved to a temp file."""
+    from PIL import Image
+
+    # Fixed small size to stay within Hypothesis list limits
+    width, height = 32, 32
+    raw = draw(st.binary(min_size=width * height * 3, max_size=width * height * 3))
+    img = Image.frombytes("RGB", (width, height), raw)
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+    img.save(tmp.name)
+    tmp.close()
+    return Path(tmp.name)
+
+
+# ---------------------------------------------------------------------------
+# Task 8.4 — Property 4: Output markdown contains all required sections
+# ---------------------------------------------------------------------------
+
+# Feature: image-to-markdown, Property 4: Output markdown contains all required sections
+# Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5
+@pytest.mark.skipif(not cv2_available, reason="cv2 not importable")
+@given(image_strategy())
+@settings(max_examples=100, deadline=None)
+def test_output_contains_all_sections(image_path):
+    """Property 4: All five section headings appear in the markdown output."""
+    try:
+        pil_image, metadata = load_image(image_path)
+        metadata.lang = "eng"
+        ocr_text = run_ocr(pil_image, lang="eng") if shutil.which("tesseract") else ""
+        vision = run_vision(image_path)
+        result = AnalysisResult(metadata=metadata, extracted_text=ocr_text, vision=vision)
+        md = build_markdown(result)
+
+        # All five headings must appear in order
+        sections = ["# Image:", "## Summary", "## Extracted Text", "## Visual Structure", "## Metadata"]
+        positions = [md.index(s) for s in sections]
+        assert positions == sorted(positions), "Sections are not in the expected order"
+        for s in sections:
+            assert s in md
+    finally:
+        try:
+            os.unlink(image_path)
+        except OSError:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# Task 8.5 — Property 5: Output file is valid UTF-8
+# ---------------------------------------------------------------------------
+
+# Feature: image-to-markdown, Property 5: Output file is valid UTF-8
+# Validates: Requirements 3.6
+@pytest.mark.skipif(not cv2_available, reason="cv2 not importable")
+@given(image_strategy())
+@settings(max_examples=100, deadline=None)
+def test_output_is_valid_utf8(image_path):
+    """Property 5: Bytes written to the output .md file are valid UTF-8."""
+    try:
+        pil_image, metadata = load_image(image_path)
+        metadata.lang = "eng"
+        ocr_text = run_ocr(pil_image, lang="eng") if shutil.which("tesseract") else ""
+        vision = run_vision(image_path)
+        result = AnalysisResult(metadata=metadata, extracted_text=ocr_text, vision=vision)
+        md = build_markdown(result)
+
+        with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as tmp:
+            out_path = Path(tmp.name)
+        try:
+            write_output(md, out_path)
+            raw_bytes = out_path.read_bytes()
+            # Must not raise
+            raw_bytes.decode("utf-8")
+        finally:
+            try:
+                os.unlink(out_path)
+            except OSError:
+                pass
+    finally:
+        try:
+            os.unlink(image_path)
+        except OSError:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# Task 8.6 — Property 8: Output is valid Markdown
+# ---------------------------------------------------------------------------
+
+# Feature: image-to-markdown, Property 8: Output is valid Markdown
+# Validates: Requirements 6.1
+@pytest.mark.skipif(not cv2_available, reason="cv2 not importable")
+@given(image_strategy())
+@settings(max_examples=100, deadline=None)
+def test_output_is_valid_markdown(image_path):
+    """Property 8: Output markdown is parseable by markdown-it-py without error."""
+    from markdown_it import MarkdownIt
+
+    try:
+        pil_image, metadata = load_image(image_path)
+        metadata.lang = "eng"
+        ocr_text = run_ocr(pil_image, lang="eng") if shutil.which("tesseract") else ""
+        vision = run_vision(image_path)
+        result = AnalysisResult(metadata=metadata, extracted_text=ocr_text, vision=vision)
+        md = build_markdown(result)
+
+        # Parse — should not raise
+        parser = MarkdownIt()
+        tokens = parser.parse(md)
+        assert tokens is not None
+    finally:
+        try:
+            os.unlink(image_path)
+        except OSError:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# Task 8.7 — Property 9: Deterministic output (idempotence)
+# ---------------------------------------------------------------------------
+
+# Feature: image-to-markdown, Property 9: Deterministic output (idempotence)
+# Validates: Requirements 6.2
+@pytest.mark.skipif(not cv2_available, reason="cv2 not importable")
+@given(image_strategy())
+@settings(max_examples=100, deadline=None)
+def test_output_is_deterministic(image_path):
+    """Property 9: Running the pipeline twice with identical args produces identical output."""
+    try:
+        def run_pipeline(img_path):
+            pil_image, metadata = load_image(img_path)
+            metadata.lang = "eng"
+            ocr_text = run_ocr(pil_image, lang="eng") if shutil.which("tesseract") else ""
+            vision = run_vision(img_path)
+            result = AnalysisResult(metadata=metadata, extracted_text=ocr_text, vision=vision)
+            return build_markdown(result)
+
+        md1 = run_pipeline(image_path)
+        md2 = run_pipeline(image_path)
+        assert md1 == md2, "Pipeline produced different output on second run"
+    finally:
+        try:
+            os.unlink(image_path)
+        except OSError:
+            pass
