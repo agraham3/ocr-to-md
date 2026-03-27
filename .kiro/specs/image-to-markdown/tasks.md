@@ -67,16 +67,16 @@ Implement `image_to_markdown.py` as a single-file Python CLI script that runs Te
     - **Validates: Requirements 1.5**
     - Use `@given(st.from_regex(r'[a-zA-Z0-9_\-]+', fullmatch=True), st.sampled_from(list(SUPPORTED_EXTENSIONS)))` and assert `derive_output_path(Path(stem+ext), None).stem == stem`
 
-- [ ] 5. Implement `load_image()` and `run_ocr()`
-  - [ ] 5.1 Implement `load_image(image_path: Path) -> tuple[PIL.Image.Image, ImageMetadata]`
+- [x] 5. Implement `load_image()` and `run_ocr()`
+  - [x] 5.1 Implement `load_image(image_path: Path) -> tuple[PIL.Image.Image, ImageMetadata]`
     - Open with `PIL.Image.open()`, extract `width`, `height`, `file_size`, `filename`
     - _Requirements: 2.1_
 
-  - [ ] 5.2 Implement `run_ocr(image: PIL.Image.Image, lang: str) -> str`
+  - [x] 5.2 Implement `run_ocr(image: PIL.Image.Image, lang: str) -> str`
     - Call `pytesseract.image_to_string(image, lang=lang)` and return the result
     - _Requirements: 2.1, 2.2, 2.5, 2.6_
 
-  - [ ] 5.3 Write unit tests for `load_image` and `run_ocr`
+  - [x] 5.3 Write unit tests for `load_image` and `run_ocr`
     - `test_run_ocr_with_text_image`: small synthetic PIL image with known text → non-empty result
     - `test_run_ocr_blank_image`: blank white image → empty string
     - _Requirements: 2.1, 2.5_

@@ -133,3 +133,26 @@ def validate_input(image_path: Path):
             file=sys.stderr,
         )
         sys.exit(1)
+
+
+def load_image(image_path: Path):
+    """Open image with Pillow and return (PIL.Image, ImageMetadata)."""
+    from PIL import Image
+
+    image = Image.open(image_path)
+    width, height = image.size
+    metadata = ImageMetadata(
+        filename=image_path.name,
+        width=width,
+        height=height,
+        file_size=image_path.stat().st_size,
+        lang="eng",  # default; caller may override after construction
+    )
+    return image, metadata
+
+
+def run_ocr(image, lang: str) -> str:
+    """Run Tesseract OCR on a PIL image and return the extracted text."""
+    import pytesseract
+
+    return pytesseract.image_to_string(image, lang=lang)

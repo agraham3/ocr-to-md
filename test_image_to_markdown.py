@@ -212,3 +212,66 @@ def test_property_output_path_stem_matches_input(stem, ext):
     result = derive_output_path(image_path, None)
     assert result.stem == stem
     assert result.suffix == ".md"
+
+
+# ---------------------------------------------------------------------------
+# load_image and run_ocr tests (Task 5)
+# Requirements: 2.1, 2.5
+# ---------------------------------------------------------------------------
+
+from image_to_markdown import load_image, run_ocr
+
+
+def test_load_image_returns_metadata(tmp_path):
+    """load_image extracts correct width, height, file_size, and filename."""
+    from PIL import Image
+
+    img = Image.new("RGB", (80, 60), color=(200, 200, 200))
+    img_path = tmp_path / "test_img.png"
+    img.save(img_path)
+
+    pil_image, metadata = load_image(img_path)
+
+    assert metadata.filename == "test_img.png"
+    assert metadata.width == 80
+    assert metadata.height == 60
+    assert metadata.file_size == img_path.stat().st_size
+    assert metadata.file_size > 0
+    # Returned PIL image should have the same dimensions
+    assert pil_image.size == (80, 60)
+
+
+import shutil
+
+# Skip OCR tests when the Tesseract binary is not installed on the system.
+tesseract_available = shutil.which("tesseract") is not None
+requires_tesseract = pytest.mark.skipif(
+    not tesseract_available,
+    reason="Tesseract binary not found on PATH — install tesseract to run OCR tests",
+)
+
+
+@requires_tesseract
+def test_run_ocr_with_text_image():
+    """Req 2.1: OCR on a synthetic image with drawn text returns a non-empty string."""
+    from PIL import Image, ImageDraw
+
+    # Create a white image and draw clear black text on it
+    img = Image.new("RGB", (200, 60), color=(255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    draw.text((10, 10), "Hello", fill=(0, 0, 0))
+
+    result = run_ocr(img, lang="eng")
+    assert isinstance(result, str)
+    assert result.strip() != "", "Expected non-empty OCR result for image with text"
+
+
+@requires_tesseract
+def test_run_ocr_blank_image():
+    """Req 2.5: OCR on a blank white image returns an empty/whitespace-only string."""
+    from PIL import Image
+
+    img = Image.new("RGB", (200, 200), color=(255, 255, 255))
+    result = run_ocr(img, lang="eng")
+    assert isinstance(result, str)
+    assert result.strip() == "", f"Expected empty OCR result for blank image, got: {result!r}"
