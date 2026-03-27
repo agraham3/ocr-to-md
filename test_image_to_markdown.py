@@ -8,8 +8,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
-from image_to_markdown import validate_input, parse_args
+from image_to_markdown import validate_input, parse_args, SUPPORTED_EXTENSIONS
 
 
 # ---------------------------------------------------------------------------
@@ -68,3 +70,45 @@ def test_lang_override(tmp_path):
     with patch("sys.argv", ["image_to_markdown.py", str(dummy), "--lang", "fra"]):
         args = parse_args()
     assert args.lang == "fra"
+
+
+# ---------------------------------------------------------------------------
+# Property-based tests
+# ---------------------------------------------------------------------------
+
+# Feature: image-to-markdown, Property 1: Invalid path rejection
+# Validates: Requirements 1.2
+@given(st.text(min_size=1).filter(lambda s: not Path(s).exists()))
+@settings(max_examples=100)
+def test_property_invalid_path_rejection(path_str):
+    """Property 1: Any non-existent path causes validate_input to exit non-zero with non-empty stderr."""
+    import io
+    fake_stderr = io.StringIO()
+    with patch("sys.stderr", fake_stderr):
+        with pytest.raises(SystemExit) as exc_info:
+            validate_input(Path(path_str))
+    assert exc_info.value.code != 0
+    assert fake_stderr.getvalue().strip() != ""
+
+
+# Feature: image-to-markdown, Property 2: Invalid extension rejection
+# Validates: Requirements 1.3
+@given(
+    st.text(alphabet=st.characters(whitelist_categories=("Ll", "Lu", "Nd")), min_size=1, max_size=10)
+    .filter(lambda e: ("." + e.lower()) not in SUPPORTED_EXTENSIONS)
+)
+@settings(max_examples=100)
+def test_property_invalid_extension_rejection(ext):
+    """Property 2: Any file with an extension not in SUPPORTED_EXTENSIONS causes validate_input to exit non-zero with non-empty stderr."""
+    import io
+    import tempfile
+    import os
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        bad_file = Path(tmp_dir) / f"file.{ext}"
+        bad_file.write_bytes(b"dummy content")
+        fake_stderr = io.StringIO()
+        with patch("sys.stderr", fake_stderr):
+            with pytest.raises(SystemExit) as exc_info:
+                validate_input(bad_file)
+        assert exc_info.value.code != 0
+        assert fake_stderr.getvalue().strip() != ""

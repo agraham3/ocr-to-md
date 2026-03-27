@@ -35,12 +35,12 @@ Implement `image_to_markdown.py` as a single-file Python CLI script that runs Te
     - `test_lang_override`: `--lang fra` → `args.lang == "fra"`
     - _Requirements: 1.2, 1.3, 5.1, 5.3_
 
-  - [ ] 3.4 Write property test for invalid path rejection (Property 1)
+  - [x] 3.4 Write property test for invalid path rejection (Property 1)
     - **Property 1: Invalid path rejection**
     - **Validates: Requirements 1.2**
     - Use `@given(st.text(min_size=1).filter(lambda s: not Path(s).exists()))` to generate non-existent paths and assert exit code is non-zero with non-empty stderr
 
-  - [ ] 3.5 Write property test for invalid extension rejection (Property 2)
+  - [x] 3.5 Write property test for invalid extension rejection (Property 2)
     - **Property 2: Invalid extension rejection**
     - **Validates: Requirements 1.3**
     - Generate extensions not in `SUPPORTED_EXTENSIONS`, create a temp file with that extension, assert exit code is non-zero with non-empty stderr
